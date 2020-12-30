@@ -1,7 +1,7 @@
 extern crate crypto;
 
 use self::crypto::buffer::{BufferResult, WriteBuffer, ReadBuffer};
-use crate::constants::{INITIALIZE_AES_KEY_IV, MESSAGE_BUFF_SIZE};
+use crate::constants::{INITIALIZE_AES_KEY_IV, MESSAGE_BUFF_SIZE, Res};
 
 
 ///
@@ -74,7 +74,7 @@ impl KeyBuilder{
     /// ```
     /// let key = "0987654321qwerty";
     /// let token = "1234567890abcdef";
-    /// let msg = aqara_rs::builder::KeyBuilder::encode_str(key,token)?;
+    /// let msg = aqara_rs::builder::KeyBuilder::encode_str(key,token).unwrap();
     /// println!("Builder Key = {}",msg);
     /// ```
     ///
