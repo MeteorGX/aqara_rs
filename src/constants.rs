@@ -16,11 +16,15 @@ pub const INITIALIZE_AES_KEY_IV:[u8;AES_KEY_SIZE] = [
     0x17, 0x99, 0x6d, 0x09, 0x3d, 0x28, 0xdd, 0xb3, 0xba, 0x69, 0x5a, 0x2e, 0x6f, 0x58, 0x56, 0x2e
 ];
 
+///
+/// 硬编码 whois 命令
+///
+pub const COMMAND_WHOIS: &'static str = "{ \"cmd\":\"whois\"}";
 
 ///
 /// 默认网关广播地址
 ///
-pub const DEFAULT_BROADCAST_ADDRESS:&'static str = "224.0.0.50";
+pub const DEFAULT_BROADCAST_ADDRESS: std::net::Ipv4Addr = std::net::Ipv4Addr::new(224,0,0,50);
 
 ///
 /// 默认网关广播端口

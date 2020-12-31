@@ -63,7 +63,7 @@ impl Gateway {
     /// 创建广播服务器
     ///
     pub fn create_broadcast(&mut self)->Res<()>{
-        self.socket.set_broadcast(true);
+        //self.socket.set_broadcast(true);
 
 
         // 测试信息发送到广播

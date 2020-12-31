@@ -74,7 +74,7 @@ impl KeyBuilder{
     /// ```
     /// let key = "0987654321qwerty";
     /// let token = "1234567890abcdef";
-    /// let msg = aqara_rs::builder::KeyBuilder::encode_str(key,token)?;
+    /// let msg = aqara_rs::builder::KeyBuilder::encode_str(key,token).unwrap();
     /// println!("Builder Key = {}",msg);
     /// ```
     ///
