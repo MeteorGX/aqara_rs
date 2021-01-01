@@ -1,4 +1,4 @@
-use aqara_rs::constants::Res;
+use aqara_rs::prelude::Res;
 use aqara_rs::session::{Unicast, Broadcast, Multicast};
 use std::net::{Ipv4Addr, UdpSocket, SocketAddr};
 

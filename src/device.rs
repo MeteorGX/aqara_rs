@@ -27,64 +27,39 @@
 //! 以此架构可以反推如何构建出网关服务
 //!
 
-use std::net::UdpSocket;
-use crate::constants::{DEFAULT_BROADCAST_ADDRESS, DEFAULT_BROADCAST_PORT, Res};
+use crate::prelude::{DEFAULT_MULTICAST_ADDRESS, DEFAULT_MULTICAST_PORT, Res, DEFAULT_UNICAST_ADDRESS, DEFAULT_UNICAST_PORT};
+use crate::session::{Multicast, Unicast};
 
 ///
 /// 网关构建器
-/// 初始化网关的配置信息
+/// 初始化网关的配置信息, 一般来说网关内部有组播和单播句柄, 组播用于服务发现和通知, 单播用于点对点通讯
 ///
 /// 参数说明:
-/// * broadcast_address: 网关的广播地址, 一般默认为 `224.0.0.50`
-/// * broadcast_port: 网关的广播端口, 一般默认为 `4321`
-/// * server_address: 本机监听接收网关服务的地址, 一般可以留空, 只有在设备支持多网络环境的时候才需要
-/// * server_port: 本机监听接收网关服务的端口, 一般默认为 `9898`
+/// * multicast_address: 网关的组播地址, 一般默认为 `224.0.0.50`
+/// * multicast_port: 网关的组播端口, 一般默认为 `4321`
+/// * unicast_address: 本机单播接收网关服务的地址, 一般可以留空, 只有在设备支持多网络环境的时候才需要
+/// * unicast_port: 本机单播接收网关服务的端口, 一般默认为 `9898`
 ///
 pub struct Gateway{
-    socket: UdpSocket
+    multicast:Multicast,
+    unicast:Unicast,
 }
 
 impl Gateway {
-    ///
-    /// 默认加载网关, 这里读取系统默认的 UDP 组播地址 -> UDP:224.0.0.50:4321
-    ///
-    pub fn default() -> Res<Self> {
-        Ok(Self{ socket: UdpSocket::bind(format!("{}:{}",DEFAULT_BROADCAST_ADDRESS,DEFAULT_BROADCAST_PORT))? })
+    pub fn default()->Res<Self>{
+        let mut multicast = Multicast::connect(DEFAULT_MULTICAST_ADDRESS,DEFAULT_MULTICAST_PORT)?;
+        let mut unicast = Unicast::connect(DEFAULT_UNICAST_ADDRESS,DEFAULT_UNICAST_PORT)?;
+
+        {
+            let borrow = multicast.get_socket();
+            borrow.set_read_timeout(Some(std::time::Duration::new(5,0)))?;
+        }
+
+        {
+            let borrow = unicast.get_socket();
+            borrow.set_read_timeout(Some(std::time::Duration::new(5,0)))?;
+        }
+
+        Ok(Self{multicast,unicast})
     }
-
-    ///
-    /// 手动配置连接进网关
-    ///
-    pub fn from(broadcast_address:&str,broadcast_port:u32) -> Res<Self>{
-        Ok(Self{ socket: UdpSocket::bind(format!("{}:{}",broadcast_address,broadcast_port))? })
-    }
-
-    ///
-    /// 创建广播服务器
-    ///
-    pub fn create_broadcast(&mut self)->Res<()>{
-        //self.socket.set_broadcast(true);
-
-
-        // 测试信息发送到广播
-
-
-        Ok(())
-    }
-
-
-    ///
-    /// 以组播方式发送命令：
-    ///
-    pub fn multi_cast(&mut self)->Res<()>{
-        Ok(())
-    }
-
-    ///
-    /// 以单播方式发送命令：
-    ///
-    pub fn single_cast(&mut self)->Res<()>{
-        Ok(())
-    }
-
 }

@@ -1,7 +1,7 @@
 extern crate crypto;
 
 use self::crypto::buffer::{BufferResult, WriteBuffer, ReadBuffer};
-use crate::constants::{INITIALIZE_AES_KEY_IV, MESSAGE_BUFF_SIZE};
+use crate::prelude::{INITIALIZE_AES_KEY_IV, MESSAGE_BUFF_SIZE};
 
 
 ///

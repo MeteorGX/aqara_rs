@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-pub mod constants;
+pub mod prelude;
 pub mod builder;
 pub mod device;
 pub mod session;

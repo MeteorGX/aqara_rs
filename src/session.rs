@@ -1,5 +1,6 @@
-use crate::constants::*;
+use crate::prelude::*;
 use std::net::{UdpSocket, Ipv4Addr, SocketAddr, IpAddr};
+use std::borrow::BorrowMut;
 
 
 ///
@@ -66,6 +67,14 @@ impl Unicast{
     pub fn peek_from(&mut self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
         Ok(self.ss.peek_from(buf)?)
     }
+
+
+    ///
+    /// 获取原始的 socket 对象, 主要用于设置属性(借用)
+    ///
+    pub fn get_socket(&mut self)->&mut UdpSocket{
+        self.ss.borrow_mut()
+    }
 }
 
 impl Broadcast{
@@ -107,6 +116,14 @@ impl Broadcast{
     ///
     pub fn peek_from(&mut self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
         Ok(self.ss.peek_from(buf)?)
+    }
+
+
+    ///
+    /// 获取原始的 socket 对象, 主要用于设置属性(借用)
+    ///
+    pub fn get_socket(&mut self)->&mut UdpSocket{
+        self.ss.borrow_mut()
     }
 
 }
@@ -155,6 +172,14 @@ impl Multicast{
     ///
     pub fn peek_from(&mut self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
         Ok(self.ss.peek_from(buf)?)
+    }
+
+
+    ///
+    /// 获取原始的 socket 对象, 主要用于设置属性(借用)
+    ///
+    pub fn get_socket(&mut self)->&mut UdpSocket{
+        self.ss.borrow_mut()
     }
 
 }

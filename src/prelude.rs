@@ -22,19 +22,24 @@ pub const INITIALIZE_AES_KEY_IV:[u8;AES_KEY_SIZE] = [
 pub const COMMAND_WHOIS: &'static str = "{ \"cmd\":\"whois\"}";
 
 ///
-/// 默认网关广播地址
+/// 默认网关组播地址
 ///
-pub const DEFAULT_BROADCAST_ADDRESS: std::net::Ipv4Addr = std::net::Ipv4Addr::new(224,0,0,50);
+pub const DEFAULT_MULTICAST_ADDRESS: std::net::Ipv4Addr = std::net::Ipv4Addr::new(224,0,0,50);
 
 ///
-/// 默认网关广播端口
+/// 默认网关组播端口
 ///
-pub const DEFAULT_BROADCAST_PORT:u32 = 4321;
+pub const DEFAULT_MULTICAST_PORT:u16 = 4321;
 
 ///
-/// 默认服务端口
+/// 默认网关单播地址
 ///
-pub const DEFAULT_SERVER_PORT:u32 = 9898;
+pub const DEFAULT_UNICAST_ADDRESS: std::net::Ipv4Addr = std::net::Ipv4Addr::UNSPECIFIED;
+
+///
+/// 默认网关单播端口
+///
+pub const DEFAULT_UNICAST_PORT:u16 = 9898;
 
 ///
 /// 设备状态
