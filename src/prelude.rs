@@ -1,4 +1,3 @@
-
 ///
 /// 心跳反馈的字节长度: 16
 ///
@@ -41,21 +40,6 @@ pub const DEFAULT_UNICAST_ADDRESS: std::net::Ipv4Addr = std::net::Ipv4Addr::UNSP
 ///
 pub const DEFAULT_UNICAST_PORT:u16 = 9898;
 
-///
-/// 设备状态
-///
-#[derive(Debug)]
-pub enum DeviceStatus{
-    Open, // 开放
-    Close, // 关闭
-    Motion, // 被人触发动作
-    Click, // 点击
-    DoubleClick, // 双击
-    BothClick,// 左右键同时按下
-    On, // 开启
-    Off, // 关闭
-}
-
 
 ///
 /// 定义简单的错误处理 BOX
@@ -67,3 +51,27 @@ pub type EBox = Box<dyn std::error::Error + Send + Sync>;
 ///
 pub type Res<T> = Result<T,EBox>;
 
+
+pub trait ResponseEvent{
+    const SZ:usize = 1024;
+    fn join_multicast(&mut self){}
+    fn join_broadcast(&mut self){}
+    fn join_unicast(&mut self){}
+}
+
+
+///
+/// 设备状态
+///
+#[derive(Debug)]
+pub enum DeviceStatus{
+    Unknown, // 未知命令
+    Open, // 开放
+    Close, // 关闭
+    Motion, // 被人触发动作
+    Click, // 点击
+    DoubleClick, // 双击
+    BothClick,// 左右键同时按下
+    On, // 开启
+    Off, // 关闭
+}
