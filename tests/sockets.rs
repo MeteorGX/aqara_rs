@@ -10,7 +10,7 @@ fn unicast() ->Res<()>{
     let server_port = 8081;
 
     // 绑定端口并且创建服务器
-    let mut server = Unicast::create(server_address,server_port)?;
+    let server = Unicast::create(server_address,server_port)?;
 
     // 创建线程并移交服务器任务
     std::thread::spawn(move ||{
@@ -32,7 +32,7 @@ fn unicast() ->Res<()>{
     // 测试单播发送数据
 
     // 初始化单播客户端
-    let mut client = Unicast::connect(server_address.clone(),server_port)?;
+    let client = Unicast::connect(server_address.clone(),server_port)?;
 
     // 发送数据
     let message = "{ \"cmd\": \"unicast\" }";
@@ -53,7 +53,7 @@ fn broadcast()->Res<()>{
     let server_port = 8082;
 
     // 绑定端口并且创建服务器
-    let mut server = Broadcast::create(
+    let server = Broadcast::create(
         server_address,
         server_port
     )?;
@@ -79,7 +79,7 @@ fn broadcast()->Res<()>{
 
     // 初始化广播客户端: 委托 255.255.255.255 向内网的所有主机端口 8082 发送信息
     let broadcast_address = Ipv4Addr::new(255,255,255,255);// 广播地址
-    let mut client = Broadcast::connect(broadcast_address,server_port)?;
+    let client = Broadcast::connect(broadcast_address,server_port)?;
 
     // 发送数据
     let message = "{ \"cmd\": \"broadcast\" }";
@@ -101,7 +101,7 @@ fn multicast()->Res<()>{
     let server_port = 8083;
 
     // 绑定端口并且创建服务器
-    let mut server = Multicast::create(
+    let server = Multicast::create(
         server_address,
         server_port,
         Ipv4Addr::new(224,0,0,50),
@@ -129,7 +129,7 @@ fn multicast()->Res<()>{
 
     // 初始化组播客户端: 委托 224.0.0.50 向内网的所有主机端口 8083 发送信息
     let multicast_address = Ipv4Addr::new(224,0,0,50);// 广播地址
-    let mut client = Multicast::connect(multicast_address,server_port)?;
+    let client = Multicast::connect(multicast_address,server_port)?;
 
     // 发送数据
     let message = "{ \"cmd\": \"multicast\" }";
