@@ -1,7 +1,6 @@
 use aqara_rs::prelude::{Res, ResponseEvent};
-use aqara_rs::device::Gateway;
 use aqara_rs::session::{Multicast, Unicast};
-
+use aqara_rs::device::Gateway;
 
 struct Echo;
 
@@ -26,10 +25,10 @@ impl ResponseEvent for Echo{
     }
 }
 
-#[test]
-fn gateway()->Res<()>{
+fn main() -> Res<()> {
 
     let server = Gateway::with_capacity(1024)?;
     server.run(Echo::new())?;
+
     Ok(())
 }

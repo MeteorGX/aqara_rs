@@ -1,6 +1,6 @@
-use aqara_rs::constants::Res;
+use aqara_rs::prelude::Res;
 use aqara_rs::session::{Unicast, Broadcast, Multicast};
-use std::net::{Ipv4Addr, UdpSocket, SocketAddr};
+use std::net::{Ipv4Addr};
 
 
 #[test]
@@ -10,9 +10,7 @@ fn unicast() ->Res<()>{
     let server_port = 8081;
 
     // 绑定端口并且创建服务器
-    let server = UdpSocket::bind(SocketAddr::from(
-        (server_address.clone(),server_port)
-    ))?;
+    let server = Unicast::create(server_address,server_port)?;
 
     // 创建线程并移交服务器任务
     std::thread::spawn(move ||{
@@ -23,8 +21,12 @@ fn unicast() ->Res<()>{
 
         // 循环接收数据并回显
         while let Ok((received,client)) =  server.recv_from(&mut buffer){
-            println!("Server[Unicast] Received = {} Bytes",received);
-            let _ = server.send_to(&buffer[..received],client);
+            if let Ok(client) = server.load_client(client) {
+                let addr = client.get_client_addr().unwrap();
+
+                println!("Server[Unicast] Received = {} Bytes | Client = {:?}:{:?}",received,addr.ip(),addr.port());
+                let _ = client.send(&buffer[..received]);
+            }
         }
     });
 
@@ -34,11 +36,11 @@ fn unicast() ->Res<()>{
     // 测试单播发送数据
 
     // 初始化单播客户端
-    let mut client = Unicast::connect(server_address.clone(),server_port)?;
+    let client = Unicast::connect(server_address.clone(),server_port)?;
 
     // 发送数据
     let message = "{ \"cmd\": \"unicast\" }";
-    client.send_to(&message.as_bytes())?;
+    client.send(&message.as_bytes())?;
 
     // 接收数据
     let mut buffer = [0;1024];
@@ -55,9 +57,10 @@ fn broadcast()->Res<()>{
     let server_port = 8082;
 
     // 绑定端口并且创建服务器
-    let server = UdpSocket::bind(SocketAddr::from(
-        (server_address,server_port)
-    ))?;
+    let server = Broadcast::create(
+        server_address,
+        server_port
+    )?;
 
     // 创建线程并移交服务器任务
     std::thread::spawn(move ||{
@@ -68,8 +71,12 @@ fn broadcast()->Res<()>{
 
         // 循环接收数据并回显
         while let Ok((received,client)) =  server.recv_from(&mut buffer){
-            println!("Server[Broadcast] Received = {} Bytes",received);
-            let _ = server.send_to(&buffer[..received],client);
+            if let Ok(client) = server.load_client(client) {
+                let addr = client.get_client_addr().unwrap();
+
+                println!("Server[Broadcast] Received = {} Bytes | Client = {:?}:{:?}",received,addr.ip(),addr.port());
+                let _ = client.send(&buffer[..received]);
+            }
         }
     });
 
@@ -80,11 +87,11 @@ fn broadcast()->Res<()>{
 
     // 初始化广播客户端: 委托 255.255.255.255 向内网的所有主机端口 8082 发送信息
     let broadcast_address = Ipv4Addr::new(255,255,255,255);// 广播地址
-    let mut client = Broadcast::connect(broadcast_address,server_port)?;
+    let client = Broadcast::connect(broadcast_address,server_port)?;
 
     // 发送数据
     let message = "{ \"cmd\": \"broadcast\" }";
-    client.send_to(&message.as_bytes())?;
+    client.send(&message.as_bytes())?;
 
     // 接收数据
     let mut buffer = [0;1024];
@@ -102,15 +109,12 @@ fn multicast()->Res<()>{
     let server_port = 8083;
 
     // 绑定端口并且创建服务器
-    let server = UdpSocket::bind(SocketAddr::from(
-        (server_address,server_port)
-    ))?;
-
-    // 关键点, 设置组播群
-    server.join_multicast_v4(
-        &Ipv4Addr::new(224,0,0,50),
-        &Ipv4Addr::UNSPECIFIED
-    )?; // 加入组播设置类型
+    let server = Multicast::create(
+        server_address,
+        server_port,
+        Ipv4Addr::new(224,0,0,50),
+        Ipv4Addr::UNSPECIFIED
+    )?;
 
     // 创建线程并移交服务器任务
     std::thread::spawn(move ||{
@@ -121,8 +125,12 @@ fn multicast()->Res<()>{
 
         // 循环接收数据并回显
         while let Ok((received,client)) =  server.recv_from(&mut buffer){
-            println!("Server[Multicast] Received = {} Bytes",received);
-            let _ = server.send_to(&buffer[..received],client);
+            if let Ok(client) = server.load_client(client) {
+                let addr = client.get_client_addr().unwrap();
+
+                println!("Server[Multicast] Received = {} Bytes | Client = {:?}:{:?}",received,addr.ip(),addr.port());
+                let _ = client.send(&buffer[..received]);
+            }
         }
     });
 
@@ -133,11 +141,11 @@ fn multicast()->Res<()>{
 
     // 初始化组播客户端: 委托 224.0.0.50 向内网的所有主机端口 8083 发送信息
     let multicast_address = Ipv4Addr::new(224,0,0,50);// 广播地址
-    let mut client = Multicast::connect(multicast_address,server_port)?;
+    let client = Multicast::connect(multicast_address,server_port)?;
 
     // 发送数据
     let message = "{ \"cmd\": \"multicast\" }";
-    client.send_to(&message.as_bytes())?;
+    client.send(&message.as_bytes())?;
 
     // 接收数据
     let mut buffer = [0;1024];
