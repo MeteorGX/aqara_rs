@@ -1,20 +1,21 @@
 use crate::prelude::*;
 use std::net::{UdpSocket, Ipv4Addr, SocketAddr, IpAddr};
-use std::cell::{RefCell, RefMut};
+use std::borrow::Borrow;
 
 ///
 /// 单播
 ///
 pub struct Unicast{
-    ss: RefCell<UdpSocket>,
+    ss: UdpSocket,
     target: Option<SocketAddr>,
 }
+
 
 ///
 /// 广播
 ///
 pub struct Broadcast{
-    ss: RefCell<UdpSocket>,
+    ss: UdpSocket,
     broadcast: Option<SocketAddr>,
 }
 
@@ -22,12 +23,22 @@ pub struct Broadcast{
 /// 组播|多播
 ///
 pub struct Multicast{
-    ss: RefCell<UdpSocket>,
+    ss: UdpSocket,
     multicast: Option<SocketAddr>,
 }
 
 
 impl Unicast{
+
+    ///
+    /// 加载客户端并且创建可以配置好服务端 - 客户端可以传输数据的类
+    ///
+    pub fn load_client(&self,target:SocketAddr)->Res<Self>{
+        Ok(Self{
+            ss: self.ss.try_clone()?,
+            target: Some(target)
+        })
+    }
 
     ///
     /// 单播连接指定地址
@@ -41,7 +52,7 @@ impl Unicast{
         // 生成接入对象 Socket 地址
         let target = SocketAddr::from((address,port));
         ss.connect(target)?;
-        Ok(Self{ss:RefCell::new(ss),target:Some(target)})
+        Ok(Self{ss,target:Some(target)})
     }
 
     ///
@@ -52,7 +63,7 @@ impl Unicast{
         let ss = UdpSocket::bind(SocketAddr::from(
             (address, port)
         ))?;
-        Ok(Self{ss:RefCell::new(ss),target:None})
+        Ok(Self{ss,target:None})
     }
 
 
@@ -64,14 +75,14 @@ impl Unicast{
         let target_socket = self.target.ok_or(
             std::io::Error::from(std::io::ErrorKind::AddrNotAvailable)
         )?;
-        Ok(self.ss.borrow().send_to(buf,target_socket)?)
+        Ok(self.ss.send_to(buf,target_socket)?)
     }
 
     ///
     /// 指定发送到数据对象, 主要用于服务器
     ///
     pub fn send_to(&self,buf:&[u8],target: SocketAddr)->Res<usize>{
-        Ok(self.ss.borrow().send_to(buf,target)?)
+        Ok(self.ss.send_to(buf,target)?)
     }
 
 
@@ -79,26 +90,58 @@ impl Unicast{
     /// 单播获取推送过来的数据报文
     ///
     pub fn recv_from(&self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
-        Ok(self.ss.borrow().recv_from(buf)?)
+        Ok(self.ss.recv_from(buf)?)
     }
 
     ///
     /// 单播指定缓存长度的数据, 这里会让数据一直保存在队列之中等待 recv 去消耗, 而不会去消耗数据
     ///
     pub fn peek_from(&self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
-        Ok(self.ss.borrow().peek_from(buf)?)
+        Ok(self.ss.peek_from(buf)?)
     }
 
 
     ///
     /// 获取原始的 socket 对象, 主要用于设置属性(借用)
     ///
-    pub fn get_socket(&self) -> RefMut<'_, UdpSocket> {
-        self.ss.borrow_mut()
+    pub fn get_socket(&self) -> &UdpSocket {
+        self.ss.borrow()
+    }
+
+
+    ///
+    /// 获取 监听/连接 的 Socket 地址信息
+    ///
+    pub fn get_server_addr(&self)->Option<SocketAddr>{
+        match self.ss.peer_addr() {
+            Ok(addr) => Some(addr),
+            Err(e) =>{
+                eprintln!("{:?}",e);
+                None
+            }
+        }
+    }
+
+    ///
+    /// 获取 目标 的 Socket 地址信息
+    ///
+    pub fn get_client_addr(&self)->Option<SocketAddr>{
+        self.target
     }
 }
 
 impl Broadcast{
+
+    ///
+    /// 加载客户端并且创建可以配置好服务端 - 客户端可以传输数据的类
+    ///
+    pub fn load_client(&self,target:SocketAddr)->Res<Self>{
+        Ok(Self{
+            ss: self.ss.try_clone()?,
+            broadcast: Some(target)
+        })
+    }
+
 
     ///
     /// 广播的连接相对来说, 需要传递指定的广播地址即可, 且内部不会进行 connect
@@ -114,7 +157,7 @@ impl Broadcast{
         let broadcast = SocketAddr::from((address,port));
 
         ss.set_broadcast(true)?;// 开启广播设置
-        Ok(Self{ss:RefCell::new(ss),broadcast:Some(broadcast)})
+        Ok(Self{ss,broadcast:Some(broadcast)})
     }
 
     ///
@@ -125,7 +168,7 @@ impl Broadcast{
         let ss = UdpSocket::bind(SocketAddr::from(
             (address, port)
         ))?;
-        Ok(Self{ss:RefCell::new(ss),broadcast:None})
+        Ok(Self{ss,broadcast:None})
     }
 
     ///
@@ -136,7 +179,7 @@ impl Broadcast{
         let target_socket = self.broadcast.ok_or(
             std::io::Error::from(std::io::ErrorKind::AddrNotAvailable)
         )?;
-        Ok(self.ss.borrow().send_to(buf,target_socket)?)
+        Ok(self.ss.send_to(buf,target_socket)?)
     }
 
 
@@ -144,7 +187,7 @@ impl Broadcast{
     /// 指定发送到数据对象, 主要用于服务器
     ///
     pub fn send_to(&self,buf:&[u8],target: SocketAddr)->Res<usize>{
-        Ok(self.ss.borrow().send_to(buf,target)?)
+        Ok(self.ss.send_to(buf,target)?)
     }
 
 
@@ -152,7 +195,7 @@ impl Broadcast{
     /// 获取广播数据返回的数据报文
     ///
     pub fn recv_from(&self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
-        Ok(self.ss.borrow().recv_from(buf)?)
+        Ok(self.ss.recv_from(buf)?)
     }
 
 
@@ -160,21 +203,52 @@ impl Broadcast{
     /// 获取广播推送过来指定缓存长度的数据, 这里会让数据一直保存在队列之中等待 recv 去消耗, 而不会去消耗数据
     ///
     pub fn peek_from(&self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
-        Ok(self.ss.borrow().peek_from(buf)?)
+        Ok(self.ss.peek_from(buf)?)
     }
 
 
     ///
     /// 获取原始的 socket 对象, 主要用于设置属性(借用)
     ///
-    pub fn get_socket(&self) -> RefMut<'_, UdpSocket> {
-        self.ss.borrow_mut()
+    pub fn get_socket(&self) -> &UdpSocket {
+        self.ss.borrow()
     }
 
+
+    ///
+    /// 获取 监听/连接 的 Socket 地址信息
+    ///
+    pub fn get_server_addr(&self)->Option<SocketAddr>{
+        match self.ss.peer_addr() {
+            Ok(addr) => Some(addr),
+            Err(e) =>{
+                eprintln!("{:?}",e);
+                None
+            }
+        }
+    }
+
+    ///
+    /// 获取 目标 的 Socket 地址信息
+    ///
+    pub fn get_client_addr(&self)->Option<SocketAddr>{
+        self.broadcast
+    }
 }
 
 
 impl Multicast{
+
+    ///
+    /// 加载客户端并且创建可以配置好服务端 - 客户端可以传输数据的类
+    ///
+    pub fn load_client(&self,target:SocketAddr)->Res<Self>{
+        Ok(Self{
+            ss: self.ss.try_clone()?,
+            multicast: Some(target)
+        })
+    }
+
 
     ///
     /// 组播的连接相对来说, 需要多了 join/leave 组的动作, 所以需要单独处理较多数据
@@ -195,7 +269,7 @@ impl Multicast{
             &Ipv4Addr::UNSPECIFIED
         );
 
-        Ok(Self{ss:RefCell::new(ss),multicast:Some(multicast)})
+        Ok(Self{ss,multicast:Some(multicast)})
     }
 
 
@@ -216,7 +290,7 @@ impl Multicast{
             &multicast_address,
             &interface_address
         );
-        Ok(Self{ss:RefCell::new(ss),multicast:Some(multicast_socket)})
+        Ok(Self{ss,multicast:Some(multicast_socket)})
     }
 
 
@@ -228,36 +302,56 @@ impl Multicast{
         let target_socket = self.multicast.ok_or(
             std::io::Error::from(std::io::ErrorKind::AddrNotAvailable)
         )?;
-        Ok(self.ss.borrow().send_to(buf,target_socket)?)
+        Ok(self.ss.send_to(buf,target_socket)?)
     }
 
     ///
     /// 指定发送到数据对象, 主要用于服务器
     ///
     pub fn send_to(&self,buf:&[u8],target: SocketAddr)->Res<usize>{
-        Ok(self.ss.borrow().send_to(buf,target)?)
+        Ok(self.ss.send_to(buf,target)?)
     }
 
     ///
     /// 获取组播数据返回的数据报文
     ///
     pub fn recv_from(&self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
-        Ok(self.ss.borrow().recv_from(buf)?)
+        Ok(self.ss.recv_from(buf)?)
     }
 
     ///
     /// 获取组播推送过来指定缓存长度的数据, 这里会让数据一直保存在队列之中等待 recv 去消耗, 而不会去消耗数据
     ///
     pub fn peek_from(&self,buf:&mut [u8])->Res<(usize,SocketAddr)>{
-        Ok(self.ss.borrow().peek_from(buf)?)
+        Ok(self.ss.peek_from(buf)?)
     }
 
 
     ///
     /// 获取原始的 socket 对象, 主要用于设置属性(借用)
     ///
-    pub fn get_socket(&self) -> RefMut<'_, UdpSocket> {
-        self.ss.borrow_mut()
+    pub fn get_socket(&self) -> &UdpSocket {
+        self.ss.borrow()
+    }
+
+    ///
+    /// 获取 监听/连接 的 Socket 地址信息
+    ///
+    pub fn get_server_addr(&self)->Option<SocketAddr>{
+        match self.ss.peer_addr() {
+            Ok(addr) => Some(addr),
+            Err(e) =>{
+                eprintln!("{:?}",e);
+                None
+            }
+        }
+    }
+
+    ///
+    /// 获取 目标 的 Socket 地址信息
+    ///
+    pub fn get_client_addr(&self)->Option<SocketAddr>{
+        self.multicast
     }
 
 }
@@ -270,7 +364,7 @@ impl Drop for Multicast{
         if self.multicast.is_some() {
             let target = self.multicast.unwrap();
             if let IpAddr::V4(address) = target.ip(){
-                let _ = self.ss.borrow().leave_multicast_v4(
+                let _ = self.ss.leave_multicast_v4(
                     &address,
                     &Ipv4Addr::UNSPECIFIED
                 );
