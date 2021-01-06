@@ -1,3 +1,5 @@
+use crate::session::{Multicast, Broadcast, Unicast};
+
 ///
 /// 心跳反馈的字节长度: 16
 ///
@@ -53,10 +55,9 @@ pub type Res<T> = Result<T,EBox>;
 
 
 pub trait ResponseEvent{
-    const SZ:usize = 1024;
-    fn join_multicast(&mut self){}
-    fn join_broadcast(&mut self){}
-    fn join_unicast(&mut self){}
+    fn join_multicast(&self,_ctx:Vec<u8>,_:Multicast){}
+    fn join_broadcast(&self,_ctx:Vec<u8>,_:Broadcast){}
+    fn join_unicast(&self,_ctx:Vec<u8>,_:Unicast){}
 }
 
 

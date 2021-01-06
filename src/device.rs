@@ -27,8 +27,10 @@
 //! 以此架构可以反推如何构建出网关服务
 //!
 
-use crate::prelude::{DEFAULT_MULTICAST_ADDRESS, DEFAULT_MULTICAST_PORT, Res, DEFAULT_UNICAST_ADDRESS, DEFAULT_UNICAST_PORT};
+use crate::prelude::{DEFAULT_MULTICAST_ADDRESS, DEFAULT_MULTICAST_PORT, Res, DEFAULT_UNICAST_ADDRESS, DEFAULT_UNICAST_PORT, ResponseEvent};
 use crate::session::{Multicast, Unicast};
+use std::net::Ipv4Addr;
+use std::sync::Arc;
 
 ///
 /// 网关构建器
@@ -42,24 +44,64 @@ use crate::session::{Multicast, Unicast};
 ///
 pub struct Gateway{
     multicast:Multicast,
-    unicast:Unicast,
+    unicast:Arc<Unicast>,
+    capacity:usize
 }
 
 impl Gateway {
-    pub fn default()->Res<Self>{
-        let mut multicast = Multicast::connect(DEFAULT_MULTICAST_ADDRESS,DEFAULT_MULTICAST_PORT)?;
-        let mut unicast = Unicast::connect(DEFAULT_UNICAST_ADDRESS,DEFAULT_UNICAST_PORT)?;
+    pub fn with_capacity(capacity:usize)->Res<Self>{
+        let multicast = Multicast::create(
+            DEFAULT_UNICAST_ADDRESS,
+            DEFAULT_MULTICAST_PORT,
+            DEFAULT_MULTICAST_ADDRESS,
+            Ipv4Addr::UNSPECIFIED
+        )?;
 
-        {
-            let borrow = multicast.get_socket();
-            borrow.set_read_timeout(Some(std::time::Duration::new(5,0)))?;
-        }
-
-        {
-            let borrow = unicast.get_socket();
-            borrow.set_read_timeout(Some(std::time::Duration::new(5,0)))?;
-        }
-
-        Ok(Self{multicast,unicast})
+        let unicast = Unicast::create(
+            DEFAULT_UNICAST_ADDRESS,
+            DEFAULT_UNICAST_PORT)?;
+        Ok(Self{multicast,unicast:Arc::new(unicast),capacity})
     }
+
+    pub fn run(&self, callback:Box<dyn ResponseEvent+Sync+Send>) ->Res<()>{
+
+        let cb = Arc::new(callback);
+
+        let thread_unicast = self.unicast.clone();
+        let thread_capacity = self.capacity;
+        let thread_cb = cb.clone();
+
+        std::thread::spawn(move ||{
+            let mut buffer_unicast = vec![0;thread_capacity];
+            while let Ok((sz,client)) = thread_unicast.recv_from(buffer_unicast.as_mut_slice()) {
+                if sz > 0 {
+                    let client = thread_unicast.load_client(client).unwrap();
+                    thread_cb.join_unicast(
+                        buffer_unicast[..sz].to_vec(),
+                        client
+                    );
+                }
+            };
+        });
+
+        // 注册设备发现, 设备发现必须要在主线程, 当设备发现出错的时候直接中断线程, 而不是等待服务线程主导中断
+        let mut buffer_multicast = vec![0;self.capacity];
+        let main_cb = cb.clone();
+        loop{
+            match self.multicast.recv_from(buffer_multicast.as_mut_slice()) {
+                Ok((sz,client)) => {
+                    if sz > 0 {
+                        let client = self.multicast.load_client(client).unwrap();
+                        main_cb.join_multicast(buffer_multicast[..sz].to_vec(),client);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{:?}",e);
+                }
+            }
+        }
+        Ok(())
+    }
+
+
 }
