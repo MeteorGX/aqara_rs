@@ -21,8 +21,12 @@ fn unicast() ->Res<()>{
 
         // 循环接收数据并回显
         while let Ok((received,client)) =  server.recv_from(&mut buffer){
-            println!("Server[Unicast] Received = {} Bytes | Client = {:?}:{:?}",received,client.ip(),client.port());
-            let _ = server.send_to(&buffer[..received],client);
+            if let Ok(client) = server.load_client(client) {
+                let addr = client.get_client_addr().unwrap();
+
+                println!("Server[Unicast] Received = {} Bytes | Client = {:?}:{:?}",received,addr.ip(),addr.port());
+                let _ = client.send(&buffer[..received]);
+            }
         }
     });
 
@@ -67,8 +71,12 @@ fn broadcast()->Res<()>{
 
         // 循环接收数据并回显
         while let Ok((received,client)) =  server.recv_from(&mut buffer){
-            println!("Server[Broadcast] Received = {} Bytes | Client = {:?}:{:?}",received,client.ip(),client.port());
-            let _ = server.send_to(&buffer[..received],client);
+            if let Ok(client) = server.load_client(client) {
+                let addr = client.get_client_addr().unwrap();
+
+                println!("Server[Broadcast] Received = {} Bytes | Client = {:?}:{:?}",received,addr.ip(),addr.port());
+                let _ = client.send(&buffer[..received]);
+            }
         }
     });
 
@@ -117,8 +125,12 @@ fn multicast()->Res<()>{
 
         // 循环接收数据并回显
         while let Ok((received,client)) =  server.recv_from(&mut buffer){
-            println!("Server[Multicast] Received = {} Bytes | Client = {:?}:{:?}",received,client.ip(),client.port());
-            let _ = server.send_to(&buffer[..received],client);
+            if let Ok(client) = server.load_client(client) {
+                let addr = client.get_client_addr().unwrap();
+
+                println!("Server[Multicast] Received = {} Bytes | Client = {:?}:{:?}",received,addr.ip(),addr.port());
+                let _ = client.send(&buffer[..received]);
+            }
         }
     });
 
